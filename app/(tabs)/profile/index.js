@@ -131,6 +131,11 @@ export default function ProfileScreen() {
       <Text style={styles.sectionTitle}>Cuenta</Text>
       <View style={styles.optionGroup}>
         <OptionRow
+          icon="person-circle-outline"
+          label="Información del Perfil"
+          onPress={() => router.push('/profile/settings')}
+        />
+        <OptionRow
           icon="notifications-outline"
           label="Notificaciones"
           isSwitch
