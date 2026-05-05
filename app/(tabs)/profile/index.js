@@ -147,6 +147,11 @@ export default function ProfileScreen() {
           icon="school-outline"
           label="Cómo funciona Cashmind"
           onPress={() => router.push('/onboarding')}
+        />
+        <OptionRow
+          icon="help-circle-outline"
+          label="Ayuda y Soporte"
+          onPress={() => router.push('/profile/help')}
           isLast
         />
       </View>

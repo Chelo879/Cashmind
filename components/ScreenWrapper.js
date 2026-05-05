@@ -1,5 +1,5 @@
 import React from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, StatusBar } from 'react-native';
+import { SafeAreaView, ScrollView, StyleSheet, StatusBar, Platform, View } from 'react-native';
 import { COLORS, SPACING } from '../constants/theme';
 
 /**
@@ -9,19 +9,32 @@ import { COLORS, SPACING } from '../constants/theme';
  * @param {object}  style       extra style for content container
  */
 export default function ScreenWrapper({ children, scrollable = true, style }) {
+  const contentStyle = [
+    styles.content,
+    Platform.OS === 'android' && { paddingTop: StatusBar.currentHeight + SPACING.lg },
+    style
+  ];
+
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+      <StatusBar 
+        barStyle="light-content" 
+        backgroundColor="transparent" 
+        translucent={true} 
+      />
       {scrollable ? (
         <ScrollView
           style={styles.scroll}
-          contentContainerStyle={[styles.content, style]}
+          contentContainerStyle={contentStyle}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
           {children}
         </ScrollView>
       ) : (
-        children
+        <View style={contentStyle}>
+          {children}
+        </View>
       )}
     </SafeAreaView>
   );

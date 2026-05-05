@@ -275,6 +275,7 @@ export default function FirstRunScreen() {
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      enabled={Platform.OS === 'ios'}
     >
       {/* Header */}
       <View style={styles.header}>

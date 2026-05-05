@@ -130,8 +130,7 @@ export default function ProfileScreen() {
 
       <OptionGroup title="Soporte">
         <OptionRow emoji="🎓" label="Como funciona Cashmind" onPress={() => router.push('/onboarding')} />
-        <OptionRow emoji="❓" label="Centro de ayuda"       onPress={() => {}} />
-        <OptionRow emoji="📨" label="Contactar soporte"     onPress={() => {}} />
+        <OptionRow emoji="📨" label="Contactar soporte"     onPress={() => router.push('/profile/help')} />
         <OptionRow emoji="📄" label="Terminos y privacidad" onPress={() => {}} />
       </OptionGroup>
 

@@ -690,7 +690,7 @@ export default function CashmindModal({
           <View style={styles.overlay} />
         </TouchableWithoutFeedback>
 
-        <Animated.View style={[styles.sheet, { transform: [{ translateY: slideAnim }], bottom: keyboardHeight }]}>
+        <Animated.View style={[styles.sheet, { transform: [{ translateY: slideAnim }], bottom: Platform.OS === 'ios' ? keyboardHeight : 0 }]}>
           <View style={styles.handle} />
           <View style={styles.sheetHeader}>
             <View style={styles.sheetIconWrap}>

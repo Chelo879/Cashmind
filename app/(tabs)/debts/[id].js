@@ -75,7 +75,7 @@ function ModalPago({ visible, deuda, pagoRecomendado, onConfirmar, onCerrar }) {
           <View style={styles.overlay} />
         </TouchableWithoutFeedback>
 
-        <Animated.View style={[styles.sheet, { transform: [{ translateY: slideAnim }], bottom: alturasTeclado }]}>
+        <Animated.View style={[styles.sheet, { transform: [{ translateY: slideAnim }], bottom: Platform.OS === 'ios' ? alturasTeclado : 0 }]}>
           <View style={styles.handle} />
 
           <View style={styles.sheetHeader}>
