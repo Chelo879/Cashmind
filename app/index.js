@@ -1,3 +1,7 @@
+/**
+ * app/index.js
+ * Pantalla principal con resumen financiero real.
+ */
 import React, { useRef, useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet,
@@ -10,9 +14,10 @@ import SectionHeader from '../components/SectionHeader';
 import EmptyState from '../components/EmptyState';
 import CashmindModal from '../components/CashmindModal';
 import { COLORS, FONTS, RADIUS, SPACING } from '../constants/theme';
-import { mockDebts, mockSavings, mockSummary, mockUser, optimizerDebts } from '../constants/mockData';
 import { fmt, fraction } from '../utils/format';
 import { canCoverMinimums } from '../utils/optimizer';
+import { useAppStore, agregarDeuda, agregarAhorro } from '../utils/appStore';
+import { useAuth } from '../utils/authStore';
 
 function CrisisAlert({ onPress }) {
   return (
@@ -20,7 +25,7 @@ function CrisisAlert({ onPress }) {
       <Text style={styles.crisisIcon}>🚨</Text>
       <View style={{ flex: 1 }}>
         <Text style={styles.crisisTitle}>Modo Crisis Activado</Text>
-        <Text style={styles.crisisTxt}>Tu presupuesto no cubre todos los pagos minimos. Ver plan recomendado.</Text>
+        <Text style={styles.crisisTxt}>Tu presupuesto no cubre todos los pagos mínimos. Ver plan recomendado.</Text>
       </View>
       <Text style={styles.crisisChevron}>›</Text>
     </TouchableOpacity>
@@ -32,7 +37,7 @@ function DeadlineCard({ item }) {
   const isUrgent   = item.daysUntilDue <= 7;
   const isWarning  = item.daysUntilDue <= 14 && !isUrgent;
   const badgeColor = isUrgent ? COLORS.danger : isWarning ? COLORS.warning : COLORS.success;
-  const badgeLabel = isUrgent ? 'Urgente' : isWarning ? 'Proximo' : 'Al dia';
+  const badgeLabel = isUrgent ? 'Urgente' : isWarning ? 'Próximo' : 'Al día';
   return (
     <View style={styles.deadlineCard}>
       <View style={[styles.deadlineDot, { backgroundColor: item.color }]} />
@@ -54,40 +59,38 @@ function SavingCard({ item, onPress }) {
   const progress = fraction(item.saved, item.goal);
   return (
     <TouchableOpacity style={styles.savingCard} onPress={onPress} activeOpacity={0.8}>
-      <Text style={styles.savingEmoji}>{item.emoji}</Text>
+      <View style={{ fontSize: 26, marginBottom: 8 }}>
+        <Text style={{ fontSize: 24 }}>💰</Text>
+      </View>
       <Text style={styles.savingLabel} numberOfLines={2}>{item.label}</Text>
       <Text style={styles.savingAmount}>{fmt(item.saved)}</Text>
       <Text style={styles.savingGoal}>de {fmt(item.goal)}</Text>
       <AnimatedBar progress={progress} color={item.color} height={4} />
-      {item.monthlyDeposit && (
-        <Text style={styles.savingDeposit}>{fmt(item.monthlyDeposit)}/mes</Text>
-      )}
     </TouchableOpacity>
   );
 }
 
 export default function HomeScreen() {
   const router    = useRouter();
+  const { user }  = useAuth();
+  const { debts, savings, budget } = useAppStore();
+  
   const fadeAnim  = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
 
-  const [debts,     setDebts]     = useState(mockDebts);
-  const [savings,   setSavings]   = useState(mockSavings);
   const [modalType, setModalType] = useState(null);
 
-  const isCrisis   = !canCoverMinimums(optimizerDebts, mockUser.monthlyBudget);
-  const goalPct    = fraction(mockSummary.monthlySaved, mockSummary.monthlyGoal);
-  const hasDebts   = debts.length > 0;
-  const hasSavings = savings.length > 0;
-  const hasAny     = hasDebts || hasSavings;
+  // Cálculos reales
+  const totalDebt     = debts.reduce((s, d) => s + (d.totalAmount - d.paidAmount), 0);
+  const totalSaved    = savings.reduce((s, v) => s + v.saved, 0);
+  const totalGoal     = savings.reduce((s, v) => s + v.goal, 0);
+  const isCrisis      = !canCoverMinimums(debts, budget);
+  const goalPct       = fraction(totalSaved, totalGoal);
+  const hasAny        = debts.length > 0 || savings.length > 0;
 
   const upcomingDebts = [...debts]
     .filter((d) => d.totalAmount - d.paidAmount > 0)
-    .map((d) => {
-      const urgencyMap = { '28 Mar': 3, '4 Abr': 8, '1 de cada mes': 12 };
-      return { ...d, daysUntilDue: urgencyMap[d.dueDateLabel] ?? 20 };
-    })
-    .sort((a, b) => a.daysUntilDue - b.daysUntilDue)
+    .sort((a, b) => (a.daysUntilDue || 99) - (b.daysUntilDue || 99))
     .slice(0, 2);
 
   useEffect(() => {
@@ -99,25 +102,25 @@ export default function HomeScreen() {
 
   return (
     <ScreenWrapper>
-      {/* Header — siempre visible */}
+      {/* Header */}
       <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
         <View>
-          <Text style={styles.greeting}>Hola, {mockUser.name} 👋</Text>
-          <Text style={styles.subGreeting}>Aqui esta tu resumen financiero</Text>
+          <Text style={styles.greeting}>Hola, {user.name || 'Usuario'} 👋</Text>
+          <Text style={styles.subGreeting}>Aquí está tu resumen financiero</Text>
         </View>
         <TouchableOpacity style={styles.avatarBtn} onPress={() => router.push('/profile')} activeOpacity={0.8}>
-          <Text style={styles.avatarTxt}>{mockUser.name[0]}</Text>
+          <Text style={styles.avatarTxt}>{user.name ? user.name[0].toUpperCase() : '?'}</Text>
         </TouchableOpacity>
       </Animated.View>
 
-      {/* Estado vacío — usuario nuevo sin datos */}
+      {/* Estado vacío */}
       {!hasAny && (
         <Animated.View style={[styles.emptyWrap, { opacity: fadeAnim }]}>
           <EmptyState type="home" onAction={() => setModalType('debt')} />
         </Animated.View>
       )}
 
-      {/* Contenido normal — cuando hay datos */}
+      {/* Contenido normal */}
       {hasAny && (
         <>
           {isCrisis && (
@@ -130,37 +133,41 @@ export default function HomeScreen() {
             <View style={styles.blob1} />
             <View style={styles.blob2} />
             <Text style={styles.heroLabel}>Deuda total pendiente</Text>
-            <Text style={styles.heroAmount}>{fmt(mockSummary.totalDebt)}</Text>
+            <Text style={styles.heroAmount}>{fmt(totalDebt)}</Text>
             <View style={styles.heroRow}>
               <View style={styles.heroStat}>
                 <Text style={styles.heroStatLabel}>💰 Ahorro total</Text>
-                <Text style={styles.heroStatValue}>{fmt(mockSummary.totalSaved)}</Text>
+                <Text style={styles.heroStatValue}>{fmt(totalSaved)}</Text>
               </View>
               <View style={styles.heroDivider} />
               <View style={styles.heroStat}>
                 <Text style={styles.heroStatLabel}>📅 Presupuesto</Text>
-                <Text style={styles.heroStatValue}>{fmt(mockUser.monthlyBudget)}</Text>
+                <Text style={styles.heroStatValue}>{fmt(budget)}</Text>
               </View>
             </View>
             <View style={styles.heroProgressHeader}>
-              <Text style={styles.heroProgressLabel}>Progreso del mes</Text>
+              <Text style={styles.heroProgressLabel}>Progreso de ahorros</Text>
               <Text style={styles.heroProgressPct}>{Math.round(goalPct * 100)}%</Text>
             </View>
             <AnimatedBar progress={goalPct} color={COLORS.lavender} height={8} />
           </Animated.View>
 
-          {hasDebts && (
+          {debts.length > 0 && (
             <View style={styles.section}>
-              <SectionHeader title="Proximos vencimientos" actionLabel="Ver todo" onAction={() => router.push('/debts')} />
-              {upcomingDebts.map((d) => (
-                <DeadlineCard key={d.id} item={d} />
-              ))}
+              <SectionHeader title="Próximos vencimientos" actionLabel="Ver todo" onAction={() => router.push('/debts')} />
+              {upcomingDebts.length > 0 ? (
+                upcomingDebts.map((d) => (
+                  <DeadlineCard key={d.id} item={d} />
+                ))
+              ) : (
+                <Text style={{ color: COLORS.textMuted, fontSize: FONTS.sm }}>No hay deudas pendientes</Text>
+              )}
             </View>
           )}
 
           <View style={styles.section}>
             <SectionHeader title="Mis ahorros" actionLabel="Ver todo" onAction={() => router.push('/savings')} />
-            {hasSavings ? (
+            {savings.length > 0 ? (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 20 }}>
                 {savings.map((s) => (
                   <SavingCard
@@ -181,8 +188,8 @@ export default function HomeScreen() {
         visible={!!modalType}
         type={modalType ?? 'debt'}
         onClose={() => setModalType(null)}
-        onSaveDebt={(d)   => { setDebts((p)   => [...p, d]); setModalType(null); }}
-        onSaveSaving={(s) => { setSavings((p) => [...p, s]); setModalType(null); }}
+        onSaveDebt={agregarDeuda}
+        onSaveSaving={agregarAhorro}
       />
     </ScreenWrapper>
   );

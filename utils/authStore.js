@@ -10,7 +10,8 @@ import {
   updatePassword,
   reauthenticateWithCredential,
   EmailAuthProvider,
-  deleteUser
+  deleteUser,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { doc, onSnapshot, deleteDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
@@ -56,6 +57,12 @@ onAuthStateChanged(auth, (firebaseUser) => {
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 export async function logout() {
   await firebaseSignOut(auth);
+}
+
+/** Enviar correo de recuperación de contraseña */
+export async function resetPassword(emailAddress) {
+  if (!emailAddress) throw new Error('El correo electrónico es requerido');
+  await sendPasswordResetEmail(auth, emailAddress);
 }
 
 /** Re-autenticar al usuario para operaciones sensibles */

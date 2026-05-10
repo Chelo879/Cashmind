@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ScrollView, KeyboardAvoidingView, Platform,
+  StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Alert
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { COLORS, FONTS, RADIUS, SPACING } from '../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../utils/firebase';
+import { resetPassword } from '../utils/authStore';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -34,6 +35,27 @@ export default function LoginScreen() {
         'auth/user-disabled': 'La cuenta ha sido deshabilitada',
       };
       setError(errorMessages[err.code] || 'Error al iniciar sesión');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    setError('');
+    if (!email.trim()) {
+      Alert.alert('Atención', 'Por favor, escribe tu correo electrónico en el campo superior antes de recuperar tu contraseña.');
+      return;
+    }
+    setLoading(true);
+    try {
+      await resetPassword(email.trim());
+      Alert.alert('Correo enviado', 'Te hemos enviado un enlace para restablecer tu contraseña. Revisa tu bandeja de entrada o spam.');
+    } catch (err) {
+      const errorMessages = {
+        'auth/user-not-found': 'El correo no está registrado',
+        'auth/invalid-email': 'Correo inválido',
+      };
+      setError(errorMessages[err.code] || 'Error al enviar el correo');
     } finally {
       setLoading(false);
     }
@@ -95,7 +117,7 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity onPress={() => router.push('/forgot-password')} disabled={loading}>
+          <TouchableOpacity onPress={handleForgotPassword} disabled={loading}>
             <Text style={styles.forgotLink}>¿Olvidaste tu contraseña?</Text>
           </TouchableOpacity>
 
